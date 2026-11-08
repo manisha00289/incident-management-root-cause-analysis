@@ -218,3 +218,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Incident Management Project
+
+# Python virtual environment
+.venv/
+
+# Local sample logs and generated databases
+data/application.log
+data/incidents.db
+data/incidents.db-journal
+data/incidents.db-wal
+data/incidents.db-shm
+
+# Downloaded datasets - never upload raw data
+data/raw/
+datasets/
+
+# Generated processing outputs
+data/processed/
