@@ -4,9 +4,27 @@
 
 ![Python](https://img.shields.io/badge/Python-3.14-blue)
 ![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Scikit--learn-orange)
-![Testing](https://img.shields.io/badge/Tests-32%20Passing-success)
+![Testing](https://img.shields.io/badge/Tests-37%20Passing-success)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Status](https://img.shields.io/badge/Project-In%20Development-yellow)
+
+## How It Works
+
+```text
+  Application logs ──► Parse (regex) ──► Group repeated errors ──► Assign severity ──► JSON report + SQLite
+                                         by pipeline + code        (HIGH / MEDIUM / LOW)
+
+  HDFS benchmark logs ──► Parse ──► Match 29 event templates ──► 32 features per block ──► Random Forest
+                                                                                          anomaly score
+```
+
+1. **Parse** raw log lines into structured records (timestamp, level, pipeline or block ID, message).
+2. **Detect incidents** by grouping errors that repeat for the same pipeline and error code.
+3. **Rank severity** and keep the original log lines as evidence for each incident.
+4. **Save** incidents as a JSON report and in a SQLite table for tracking.
+5. **Experiment** with machine learning on the HDFS benchmark: turn each block's events into 32 count features and score blocks with a Random Forest.
+
+Try it in under a minute: `python scripts/generate_sample_report.py` (see [Sample Output](#sample-output)).
 
 ## Project Overview
 
@@ -137,19 +155,62 @@ Implemented capabilities:
 - Class-weight balancing to account for class imbalance.
 - Model prediction and probability scoring using the trained classifier.
 
-The current implementation provides the model training foundation. A reproducible model evaluation and reporting workflow is planned.
+A reproducible evaluation script, `scripts/evaluate_model.py`, runs both the random split and the pattern-separated validation and saves the results to a JSON report.
 
 ### 5. Automated Testing
 
-The project currently includes 32 automated tests covering:
+The project currently includes 37 automated tests covering:
 
 - Incident detection.
 - HDFS log parsing.
 - Event template matching.
 - Block feature aggregation.
 - Dataset preparation.
+- Feature building and model evaluation scripts.
 
-Latest verified result: **32 tests passed.**
+Latest verified result: **37 tests passed.**
+
+## Sample Output
+
+The repository includes a small example log, [`examples/sample_application_log.txt`](examples/sample_application_log.txt), and the report the incident detector produces from it, [`examples/sample_incident_report.json`](examples/sample_incident_report.json).
+
+Regenerate it yourself:
+
+```bash
+python scripts/generate_sample_report.py
+```
+
+Excerpt from the report:
+
+```json
+{
+  "lines_parsed": 11,
+  "lines_skipped": 1,
+  "summary": {
+    "total_incidents": 2,
+    "high_severity": 1,
+    "medium_severity": 1,
+    "total_errors": 5,
+    "affected_pipelines": 2
+  },
+  "incidents": [
+    {
+      "incident_id": "INC-0001",
+      "title": "Repeated error: DB_CONN_TIMEOUT",
+      "severity": "HIGH",
+      "pipeline": "claims_ingest",
+      "error_count": 3,
+      "first_seen": "2026-11-02 08:02:15",
+      "last_seen": "2026-11-02 08:09:02",
+      "evidence": [
+        { "timestamp": "2026-11-02 08:02:15", "message": "Connection to warehouse timed out after 30s" }
+      ]
+    }
+  ]
+}
+```
+
+The malformed line in the example log is skipped on purpose, to show how the parser handles bad input.
 
 ## Model Evaluation and Validation
 
@@ -192,7 +253,7 @@ The initial random split produced excellent metrics, but the pattern-separated e
 
 The Random Forest classifier remains experimental. Further work is needed on feature engineering, validation strategies, and model evaluation before considering production use.
 
-**Reproducibility note:** These evaluation metrics are from exploratory experiments performed during development. A complete, reproducible evaluation script is not yet included in the repository.
+**Reproducibility note:** The figures above come from exploratory experiments during development. Run `scripts/evaluate_model.py` (see [Reproducing the Model Evaluation](#reproducing-the-model-evaluation)) to regenerate both evaluations from scratch. It saves every metric, fold by fold, to `reports/model_evaluation.json`.
 
 ## HDFS Benchmark Dataset
 
@@ -220,9 +281,27 @@ The following source files are required for the current HDFS processing workflow
 
 The block-level feature file (`block_features.csv`) is generated during processing and is not included in the repository.
 
-The original dataset is not bundled with this project. Download and prepare it separately from LogHub. A complete one-command dataset processing and model evaluation workflow is a future development item.
+The original dataset is not bundled with this project. Download and prepare it separately from LogHub. See [Reproducing the Model Evaluation](#reproducing-the-model-evaluation) for the two commands that build features and evaluate the model.
 
 The raw dataset and generated feature files are maintained outside this GitHub repository.
+
+## Reproducing the Model Evaluation
+
+1. Download `HDFS.log`, `HDFS.log_templates.csv`, and `anomaly_label.csv` from [LogHub](https://github.com/logpai/loghub) into `data/raw/`.
+
+2. Build the block-level features (this reads about 11 million log lines, so it takes a while):
+
+   ```bash
+   python scripts/build_hdfs_features.py --log-file data/raw/HDFS.log --templates data/raw/HDFS.log_templates.csv --output data/processed/block_features.csv
+   ```
+
+3. Run both evaluations, the random 80/20 split and the pattern-separated 5-fold validation:
+
+   ```bash
+   python scripts/evaluate_model.py --features data/processed/block_features.csv --labels data/raw/anomaly_label.csv --output reports/model_evaluation.json
+   ```
+
+The report records the Python, scikit-learn, and NumPy versions and the random seed, so results can be compared across runs.
 
 ## Project Structure
 
@@ -239,12 +318,22 @@ incident-management-root-cause-analysis/
 │   ├── dataset_preparation.py
 │   └── anomaly_detector.py
 │
+├── scripts/
+│   ├── generate_sample_report.py
+│   ├── build_hdfs_features.py
+│   └── evaluate_model.py
+│
+├── examples/
+│   ├── sample_application_log.txt
+│   └── sample_incident_report.json
+│
 ├── tests/
 │   ├── test_incidents.py
 │   ├── test_hdfs_parser.py
 │   ├── test_event_matcher.py
 │   ├── test_block_processor.py
-│   └── test_dataset_preparation.py
+│   ├── test_dataset_preparation.py
+│   └── test_evaluation_scripts.py
 │
 ├── requirements.txt
 ├── .gitignore
@@ -290,7 +379,13 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
-**Note:** The Getting Started instructions install the project dependencies and run the automated tests. They do not currently execute the complete HDFS dataset processing and model evaluation workflow. The HDFS dataset must be obtained and prepared separately.
+### 5. Generate the sample incident report
+
+```powershell
+.\.venv\Scripts\python.exe scripts\generate_sample_report.py
+```
+
+**Note:** These steps run the tests and the sample report. To run the full HDFS processing and model evaluation, download the dataset and follow [Reproducing the Model Evaluation](#reproducing-the-model-evaluation).
 
 ## Development Roadmap
 
@@ -306,6 +401,8 @@ The project is being developed incrementally across four phases.
 - [x] Dataset preparation.
 - [x] Initial Random Forest anomaly detector.
 - [x] Automated unit tests.
+- [x] Reproducible feature build and model evaluation scripts.
+- [x] Sample incident report.
 
 ### Phase 2: Investigation Intelligence
 

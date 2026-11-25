@@ -1,0 +1,61 @@
+{
+  "source_file": "sample_application_log.txt",
+  "lines_parsed": 11,
+  "lines_skipped": 1,
+  "summary": {
+    "total_incidents": 2,
+    "high_severity": 1,
+    "medium_severity": 1,
+    "low_severity": 0,
+    "total_errors": 5,
+    "affected_pipelines": 2
+  },
+  "incidents": [
+    {
+      "incident_id": "INC-0001",
+      "title": "Repeated error: DB_CONN_TIMEOUT",
+      "severity": "HIGH",
+      "pipeline": "claims_ingest",
+      "error_count": 3,
+      "error_code": "DB_CONN_TIMEOUT",
+      "status": "OPEN",
+      "first_seen": "2026-11-02 08:02:15",
+      "last_seen": "2026-11-02 08:09:02",
+      "evidence": [
+        {
+          "timestamp": "2026-11-02 08:02:15",
+          "message": "Connection to warehouse timed out after 30s"
+        },
+        {
+          "timestamp": "2026-11-02 08:05:40",
+          "message": "Connection to warehouse timed out after 30s"
+        },
+        {
+          "timestamp": "2026-11-02 08:09:02",
+          "message": "Retry limit reached while connecting to warehouse"
+        }
+      ]
+    },
+    {
+      "incident_id": "INC-0002",
+      "title": "Repeated error: SCHEMA_MISMATCH",
+      "severity": "MEDIUM",
+      "pipeline": "billing_daily",
+      "error_count": 2,
+      "error_code": "SCHEMA_MISMATCH",
+      "status": "OPEN",
+      "first_seen": "2026-11-02 08:11:47",
+      "last_seen": "2026-11-02 08:14:20",
+      "evidence": [
+        {
+          "timestamp": "2026-11-02 08:11:47",
+          "message": "Column 'payer_id' expected INT but found VARCHAR"
+        },
+        {
+          "timestamp": "2026-11-02 08:14:20",
+          "message": "Column 'payer_id' expected INT but found VARCHAR"
+        }
+      ]
+    }
+  ]
+}
