@@ -53,6 +53,7 @@ def test_duplicate_block_ids_are_not_double_counted():
 
     result = aggregator.get_block_features("blk_123")
 
+    assert result is not None
     assert result["log_count"] == 1
     assert result["event_counts"]["E21"] == 1
 
@@ -68,9 +69,15 @@ def test_distinct_block_ids_receive_the_record():
     aggregator.add_record(record, "E5")
 
     assert aggregator.block_count == 2
-    assert aggregator.get_block_features("blk_123")["log_count"] == 1
-    assert aggregator.get_block_features("blk_456")["log_count"] == 1
 
+    block_123_features = aggregator.get_block_features("blk_123")
+    block_456_features = aggregator.get_block_features("blk_456")
+
+    assert block_123_features is not None
+    assert block_456_features is not None
+
+    assert block_123_features["log_count"] == 1
+    assert block_456_features["log_count"] == 1
 
 def test_first_and_last_timestamps_are_correct():
     aggregator = BlockFeatureAggregator()
@@ -86,6 +93,8 @@ def test_first_and_last_timestamps_are_correct():
     )
 
     result = aggregator.get_block_features("blk_123")
+
+    assert result is not None
 
     assert result["first_seen"] == datetime(2008, 11, 9, 20, 35)
     assert result["last_seen"] == datetime(2008, 11, 9, 20, 40)

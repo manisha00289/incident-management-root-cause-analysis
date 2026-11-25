@@ -99,7 +99,7 @@ def test_identifiers_and_timestamps_are_not_features(tmp_path):
     assert "block_id" not in feature_names
     assert "first_seen" not in feature_names
     assert "last_seen" not in feature_names
-    assert X.shape[1] == 32
+    assert X.shape == (len(y), 32)
 
 
 def test_stratified_split_preserves_anomaly_ratio(tmp_path):

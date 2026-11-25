@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-
 # All 29 event IDs from the official HDFS template catalog.
 EVENT_IDS = tuple(f"E{i}" for i in range(1, 30))
 
@@ -148,6 +147,11 @@ class BlockFeatureAggregator:
 
             for block_id in sorted(self._blocks):
                 features = self._blocks[block_id]
+              
+                if features.first_seen is None or features.last_seen is None:
+                   raise ValueError(
+                      f"Missing timestamps for block: {block_id}"
+                   )
 
                 row = {
                     "block_id": block_id,
